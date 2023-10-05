@@ -20,10 +20,25 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
+/// Scan an input string and split it into a vector of tokens.
+///
+/// This function takes an input string `input` and splits it into individual tokens based on spaces.
+///
+/// # Arguments
+///
+/// * `input` - A string representing the input to be scanned and split into tokens.
 fn scan(input: String) -> Vec<String> {
     input.split(" ").map(String::from).collect()
 }
 
+/// Parse a vector of tokens into a command and its arguments.
+///
+/// This function takes a vector of strings `tokens` representing command tokens. It extracts the first token
+/// as the command and the rest as its arguments.
+///
+/// # Arguments
+///
+/// * `tokens` - A vector of strings representing the command tokens.
 fn parse(tokens: Vec<String>) -> Option<(String, Vec<String>)> {
     if let Some(x) = tokens.get(0) {
         let command = x.to_string();
@@ -35,9 +50,15 @@ fn parse(tokens: Vec<String>) -> Option<(String, Vec<String>)> {
     }
 }
 
-/// Execute available command
+/// Execute a command with the provided arguments.
 ///
-/// If command doesn't exist then print the message "Comand not found"
+/// This function takes a command string `command` and a vector of strings `args` representing the arguments
+/// for the command. It performs the logic for executing the specified command and returns an `io::Result<bool>`.
+///
+/// # Arguments
+///
+/// * `command` - A string representing the name of the command to execute.
+/// * `args` - A vector of strings representing the arguments for the command.
 fn execute_command(command: &str, args: Vec<String>) -> io::Result<bool> {
     if command.is_empty() {
         print!("");
@@ -54,7 +75,15 @@ fn execute_command(command: &str, args: Vec<String>) -> io::Result<bool> {
     }
 }
 
-/// Basic echo command that print the first argument in `stdout`
+/// Execute the `echo` command with the provided arguments.
+///
+/// This function takes a vector of strings `args` representing the arguments passed to the `echo` command.
+/// 
+/// It performs the logic for the `echo` linux command.
+///
+/// # Arguments
+///
+/// * `args` - A vector of strings representing the arguments for the `echo` command.
 fn execute_echo(args: Vec<String>) -> io::Result<bool> {
     let result = String::from(args.join(" ").trim());
 
@@ -63,11 +92,15 @@ fn execute_echo(args: Vec<String>) -> io::Result<bool> {
     Ok(true)
 }
 
-/// Basic ls command with options to display as a list
+/// Execute the `ls` command with the provided arguments.
 ///
-/// Available options :
+/// This function takes a vector of strings `args` representing the arguments passed to the `ls` command.
+/// 
+/// It performs the logic for the `ls` linux command.
 ///
-/// `-l` : Display directories each line
+/// # Arguments
+///
+/// * `args` - A vector of strings representing the arguments for the `ls` command.
 fn execute_ls(args: Vec<String>) -> Result<bool, io::Error> {
     let (path, options): (String, Option<HashSet<char>>) = if args.len() == 0 {
         (String::from("."), None)
@@ -152,9 +185,15 @@ fn execute_ls(args: Vec<String>) -> Result<bool, io::Error> {
     }
 }
 
-/// Available options : 'l'
+/// Validates the provided options for the `ls` command.
 ///
-/// Return `Err(&char)` with the first wrong option wrapped, from the `HashSet`, and `Ok(())` when all options are valid
+/// This function takes a reference to a `HashSet<char>` containing the options for the `ls` command.
+/// 
+/// It checks if each option is valid and only allows the option 'l' for the moment.
+///
+/// # Arguments
+///
+/// * `options` - A reference to a `HashSet<char>` containing the options for the `ls` command.
 fn validate_ls_options(options: &HashSet<char>) -> Result<(), &char> {
     let valid_options = ['l'];
 
@@ -167,9 +206,12 @@ fn validate_ls_options(options: &HashSet<char>) -> Result<(), &char> {
     return Ok(());
 }
 
-/// Terminate the application
+/// Terminate the application.
+///
+/// This function is responsible for gracefully terminating the application. It prints a "Goodbye!" message
+/// and returns `Ok(false)`.
 fn execute_exit() -> io::Result<bool> {
-    println!("Goodbye !");
+    println!("Goodbye!");
 
     Ok(false)
 }
