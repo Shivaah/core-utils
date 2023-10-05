@@ -1,10 +1,8 @@
 use std::collections::HashSet;
-use std::f32::consts::E;
-use std::hash::Hash;
-use std::io::{self};
 use std::fs::{self, DirEntry};
+use std::io::{self};
 
-fn main() -> io::Result<()> {    
+fn main() -> io::Result<()> {
     let stdin = io::stdin();
     for line in stdin.lines() {
         let input = String::from(line?.trim());
@@ -14,10 +12,10 @@ fn main() -> io::Result<()> {
             let continue_execution = execute_command(command.as_str(), args)?;
 
             if !continue_execution {
-                return Ok(())
+                return Ok(());
             }
         }
-    } 
+    }
 
     Ok(())
 }
@@ -29,10 +27,7 @@ fn scan(input: String) -> Vec<String> {
 fn parse(tokens: Vec<String>) -> Option<(String, Vec<String>)> {
     if let Some(x) = tokens.get(0) {
         let command = x.to_string();
-        let args: Vec<String> = tokens
-            .into_iter()
-            .skip(1)
-            .collect();
+        let args: Vec<String> = tokens.into_iter().skip(1).collect();
 
         Some((command, args))
     } else {
@@ -41,7 +36,7 @@ fn parse(tokens: Vec<String>) -> Option<(String, Vec<String>)> {
 }
 
 /// Execute available command
-/// 
+///
 /// If command doesn't exist then print the message "Comand not found"
 fn execute_command(command: &str, args: Vec<String>) -> io::Result<bool> {
     if command.is_empty() {
@@ -52,7 +47,7 @@ fn execute_command(command: &str, args: Vec<String>) -> io::Result<bool> {
         "echo" => execute_echo(args),
         "exit" => execute_exit(),
         "ls" => execute_ls(args),
-        _ =>  { 
+        _ => {
             eprintln!("Command not found : {}", command);
             Ok(true)
         }
@@ -62,18 +57,18 @@ fn execute_command(command: &str, args: Vec<String>) -> io::Result<bool> {
 /// Basic echo command that print the first argument in `stdout`
 fn execute_echo(args: Vec<String>) -> io::Result<bool> {
     let result = String::from(args.join(" ").trim());
-            
+
     println!("{0}", result);
 
     Ok(true)
 }
 
 /// Basic ls command with options to display as a list
-/// 
+///
 /// Available options :
-/// 
+///
 /// `-l` : Display directories each line
-fn execute_ls(args: Vec<String>) -> Result<bool, io::Error> {      
+fn execute_ls(args: Vec<String>) -> Result<bool, io::Error> {
     let (path, options): (String, Option<HashSet<char>>) = if args.len() == 0 {
         (String::from("."), None)
     } else {
@@ -86,8 +81,7 @@ fn execute_ls(args: Vec<String>) -> Result<bool, io::Error> {
                 letters
                     .chars()
                     .collect::<Vec<char>>()
-                    .retain(|e| uniques.insert(*e))
-                ;
+                    .retain(|e| uniques.insert(*e));
 
                 if let Some(second_arg) = args.get(1) {
                     (second_arg.to_string(), Some(uniques))
@@ -103,24 +97,22 @@ fn execute_ls(args: Vec<String>) -> Result<bool, io::Error> {
     };
 
     match fs::read_dir(path.clone()) {
-        Ok(read_dir) =>  {
+        Ok(read_dir) => {
             let mut errors = vec![];
 
             let entries: Vec<DirEntry> = read_dir
-                .filter_map(|entry: Result<DirEntry, io::Error>| 
-                    entry.map_err(|e: io::Error| 
-                        errors.push(e)
-                    ).ok()
-                )
-                .collect()                    
-            ;
+                .filter_map(|entry: Result<DirEntry, io::Error>| {
+                    entry.map_err(|e: io::Error| errors.push(e)).ok()
+                })
+                .collect();
 
             if errors.len() > 0 {
-                errors.into_iter().for_each(|e| println!("{}", e.to_string()));
+                errors
+                    .into_iter()
+                    .for_each(|e| println!("{}", e.to_string()));
                 return Ok(true);
             }
 
-           
             match options {
                 None => {
                     let out: String = entries
@@ -130,35 +122,38 @@ fn execute_ls(args: Vec<String>) -> Result<bool, io::Error> {
                         .join(" ");
 
                     println!("{}", out);
-                },
+                }
                 Some(letters) => {
                     if let Err(wrong_option) = validate_ls_options(&letters) {
                         println!("ls : invalid option - '{}'", wrong_option);
                     } else {
                         if letters.contains(&'l') {
-                            entries.into_iter().for_each(|e| println!("{}", e.path().display()));
-                        } 
+                            entries
+                                .into_iter()
+                                .for_each(|e| println!("{}", e.path().display()));
+                        }
                     }
-                } 
+                }
             }
-    
 
-            return Ok(true)
-        },
+            return Ok(true);
+        }
         Err(e) => {
             match e.kind() {
                 io::ErrorKind::NotFound => eprintln!("No such file or directory: {}", path),
-                io::ErrorKind::PermissionDenied => eprintln!("Permission denied to view contents of: {}", path),
+                io::ErrorKind::PermissionDenied => {
+                    eprintln!("Permission denied to view contents of: {}", path)
+                }
                 _ => eprintln!("File is not a directory: {}", path),
             }
 
-            return Ok(true)
+            return Ok(true);
         }
-    }    
+    }
 }
 
 /// Available options : 'l'
-/// 
+///
 /// Return `Err(&char)` with the first wrong option wrapped, from the `HashSet`, and `Ok(())` when all options are valid
 fn validate_ls_options(options: &HashSet<char>) -> Result<(), &char> {
     let valid_options = ['l'];
@@ -169,7 +164,7 @@ fn validate_ls_options(options: &HashSet<char>) -> Result<(), &char> {
         }
     }
 
-    return Ok(())
+    return Ok(());
 }
 
 /// Terminate the application
