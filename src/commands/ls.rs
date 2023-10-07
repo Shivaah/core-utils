@@ -22,6 +22,8 @@ pub fn execute(args: Vec<String>) -> Result<bool, io::Error> {
 
     if let Err(wrong_option) = validate_ls_options(&options) {
         println!("ls : invalid option - '{}'", wrong_option);
+
+        return Ok(true);
     }
 
     match fs::read_dir(path.clone()) {
