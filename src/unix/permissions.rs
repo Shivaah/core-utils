@@ -4,15 +4,15 @@ pub struct Permission(u32);
 
 impl Permission {
     fn readable(&self) -> bool {
-        self.0 == 4
+        self.0 & 0o4 > 0
     }
 
     fn writable(self) -> bool {
-        self.0 == 2
+        self.0 & 0o2 > 0
     }
 
     fn executable(self) -> bool {
-        self.0 == 1
+        self.0 & 0o1 > 0
     }
 }
 
