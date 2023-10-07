@@ -2,10 +2,33 @@ use std::{
     collections::HashSet,
     fs::{self, DirEntry, ReadDir},
     io,
+    os::unix::prelude::FileTypeExt,
     path::PathBuf,
 };
 
 use crate::unix::permissions::UnixPermissions;
+
+struct FileType(std::fs::FileType);
+
+impl std::fmt::Display for FileType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let file_type = self.0;
+
+        write!(
+            f,
+            "{}",
+            match file_type {
+                _ if file_type.is_dir() => 'd',
+                _ if file_type.is_symlink() => 's',
+                _ if file_type.is_block_device() => 'b',
+                _ if file_type.is_char_device() => 'c',
+                _ if file_type.is_socket() => 's',
+                _ if file_type.is_fifo() => 'p',
+                _ => '-',
+            }
+        )
+    }
+}
 
 /// Execute the `ls` command with the provided arguments.
 ///
@@ -55,7 +78,6 @@ pub fn execute(args: Vec<String>) -> Result<bool, io::Error> {
                 entries.into_iter().for_each(|e| {
                     let metadata: fs::Metadata = e.metadata().unwrap();
                     let path: PathBuf = e.path();
-                    let file_type = metadata.file_type();
                     let permissions = metadata.permissions();
 
                     let permissions_str = format!(
@@ -67,7 +89,7 @@ pub fn execute(args: Vec<String>) -> Result<bool, io::Error> {
 
                     println!(
                         "{}{} {}",
-                        if file_type.is_dir() { "d" } else { "-" },
+                        FileType(metadata.file_type()),
                         permissions_str,
                         path.display()
                     )
