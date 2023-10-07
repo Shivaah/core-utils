@@ -1,6 +1,6 @@
 use std::{
     collections::HashSet,
-    fs::{self, DirEntry},
+    fs::{self, DirEntry, ReadDir},
     io,
     os::unix::prelude::{MetadataExt, PermissionsExt},
     path::PathBuf,
@@ -20,59 +20,71 @@ use crate::unix::permissions;
 pub fn execute(args: Vec<String>) -> Result<bool, io::Error> {
     let (path, options) = parse(args);
 
+    if let Err(wrong_option) = validate_ls_options(&options) {
+        println!("ls : invalid option - '{}'", wrong_option);
+    }
+
     match fs::read_dir(path.clone()) {
         Ok(read_dir) => {
-            let mut errors = vec![];
+            let entries = read_entries(read_dir);
 
-            let entries: Vec<DirEntry> = read_dir
-                .filter_map(|entry: Result<DirEntry, io::Error>| {
-                    entry.map_err(|e: io::Error| errors.push(e)).ok()
-                })
-                .collect();
-
-            if errors.len() > 0 {
+            if let Err(errors) = entries {
                 errors
                     .into_iter()
                     .for_each(|e| println!("{}", e.to_string()));
+
                 return Ok(true);
             }
 
-            match options {
-                None => {
-                    let out: String = entries
-                        .into_iter()
-                        .map(|e| e.path().display().to_string())
-                        .collect::<Vec<String>>()
-                        .join(" ");
+            let entries = entries.unwrap();
 
-                    println!("{}", out);
-                }
-                Some(letters) => {
-                    if let Err(wrong_option) = validate_ls_options(&letters) {
-                        println!("ls : invalid option - '{}'", wrong_option);
-                    } else {
-                        if letters.contains(&'l') {
-                            entries.into_iter().for_each(|e| {
-                                let metadata: fs::Metadata = e.metadata().unwrap();
-                                let path: PathBuf = e.path();
-                                let file_type = metadata.file_type();
+            if options.len() == 0 {
+                let out: String = entries
+                    .into_iter()
+                    .map(|e| e.path().display().to_string())
+                    .collect::<Vec<String>>()
+                    .join(" ");
 
-                                println!(
-                                    "{0} {1:o} {2}",
-                                    if file_type.is_dir() { "d" } else { "-" },
-                                    metadata.mode(),
-                                    path.display()
-                                )
-                            });
-                        }
-                    }
-                }
+                println!("{}", out);
+
+                return Ok(true);
+            }
+
+            if options.contains(&'l') {
+                entries.into_iter().for_each(|e| {
+                    let metadata: fs::Metadata = e.metadata().unwrap();
+                    let path: PathBuf = e.path();
+                    let file_type = metadata.file_type();
+
+                    println!(
+                        "{0} {1:o} {2}",
+                        if file_type.is_dir() { "d" } else { "-" },
+                        metadata.mode(),
+                        path.display()
+                    )
+                });
             }
 
             return Ok(true);
         }
         Err(e) => handle_error(e, path),
     }
+}
+
+fn read_entries(read_dir: ReadDir) -> Result<Vec<DirEntry>, Vec<io::Error>> {
+    let mut errors = vec![];
+
+    let entries: Vec<DirEntry> = read_dir
+        .filter_map(|entry: Result<DirEntry, io::Error>| {
+            entry.map_err(|e: io::Error| errors.push(e)).ok()
+        })
+        .collect();
+
+    if errors.len() > 0 {
+        return Err(errors);
+    }
+
+    return Ok(entries);
 }
 
 fn handle_error(error: io::Error, path: String) -> io::Result<bool> {
@@ -87,9 +99,11 @@ fn handle_error(error: io::Error, path: String) -> io::Result<bool> {
     return Ok(true);
 }
 
-fn parse(args: Vec<String>) -> (String, Option<HashSet<char>>) {
+fn parse(args: Vec<String>) -> (String, HashSet<char>) {
+    let mut uniques: HashSet<char> = HashSet::new();
+
     if args.len() == 0 {
-        return (String::from("."), None);
+        return (String::from("."), uniques);
     }
 
     let first_arg = args.get(0).unwrap();
@@ -104,15 +118,15 @@ fn parse(args: Vec<String>) -> (String, Option<HashSet<char>>) {
                 .retain(|e| uniques.insert(*e));
 
             if let Some(second_arg) = args.get(1) {
-                (second_arg.to_string(), Some(uniques))
+                (second_arg.to_string(), uniques)
             } else {
-                (String::from("."), Some(uniques))
+                (String::from("."), uniques)
             }
         } else {
-            (first_arg.to_string(), None)
+            (first_arg.to_string(), uniques)
         }
     } else {
-        (first_arg.to_string(), None)
+        (first_arg.to_string(), uniques)
     }
 }
 
@@ -127,6 +141,10 @@ fn parse(args: Vec<String>) -> (String, Option<HashSet<char>>) {
 /// * `options` - A reference to a `HashSet<char>` containing the options for the `ls` command.
 fn validate_ls_options(options: &HashSet<char>) -> Result<(), &char> {
     let valid_options = ['l'];
+
+    if options.is_empty() {
+        return Ok(());
+    }
 
     for (_, option) in options.iter().enumerate() {
         if !valid_options.contains(option) {
