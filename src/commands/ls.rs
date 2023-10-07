@@ -2,11 +2,10 @@ use std::{
     collections::HashSet,
     fs::{self, DirEntry, ReadDir},
     io,
-    os::unix::prelude::{MetadataExt, PermissionsExt},
     path::PathBuf,
 };
 
-use crate::unix::permissions;
+use crate::unix::permissions::UnixPermissions;
 
 /// Execute the `ls` command with the provided arguments.
 ///
@@ -57,11 +56,19 @@ pub fn execute(args: Vec<String>) -> Result<bool, io::Error> {
                     let metadata: fs::Metadata = e.metadata().unwrap();
                     let path: PathBuf = e.path();
                     let file_type = metadata.file_type();
+                    let permissions = metadata.permissions();
+
+                    let permissions_str = format!(
+                        "{}{}{}",
+                        permissions.owner(),
+                        permissions.group(),
+                        permissions.other()
+                    );
 
                     println!(
-                        "{0} {1:o} {2}",
+                        "{}{} {}",
                         if file_type.is_dir() { "d" } else { "-" },
-                        metadata.mode(),
+                        permissions_str,
                         path.display()
                     )
                 });
@@ -112,8 +119,6 @@ fn parse(args: Vec<String>) -> (String, HashSet<char>) {
 
     if first_arg.starts_with("-") {
         if let Some(letters) = first_arg.get(1..) {
-            let mut uniques: HashSet<char> = HashSet::new();
-
             letters
                 .chars()
                 .collect::<Vec<char>>()
