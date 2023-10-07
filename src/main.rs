@@ -1,6 +1,7 @@
 use std::io::{self};
 
 mod commands;
+mod unix;
 
 use commands::{
     echo::execute as execute_echo, exit::execute as execute_exit, ls::execute as execute_ls,

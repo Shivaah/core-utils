@@ -2,9 +2,11 @@ use std::{
     collections::HashSet,
     fs::{self, DirEntry},
     io,
-    os::unix::prelude::PermissionsExt,
+    os::unix::prelude::{MetadataExt, PermissionsExt},
     path::PathBuf,
 };
+
+use crate::unix::permissions;
 
 /// Execute the `ls` command with the provided arguments.
 ///
@@ -53,8 +55,14 @@ pub fn execute(args: Vec<String>) -> Result<bool, io::Error> {
                             entries.into_iter().for_each(|e| {
                                 let metadata: fs::Metadata = e.metadata().unwrap();
                                 let path: PathBuf = e.path();
+                                let file_type = metadata.file_type();
 
-                                println!("permissions: {:o}", metadata.permissions().mode());
+                                println!(
+                                    "{0} {1:o} {2}",
+                                    if file_type.is_dir() { "d" } else { "-" },
+                                    metadata.mode(),
+                                    path.display()
+                                )
                             });
                         }
                     }
@@ -69,11 +77,11 @@ pub fn execute(args: Vec<String>) -> Result<bool, io::Error> {
 
 fn handle_error(error: io::Error, path: String) -> io::Result<bool> {
     match error.kind() {
-        io::ErrorKind::NotFound => eprintln!("No such file or directory: {}", path),
+        io::ErrorKind::NotFound => eprintln!("no such file or directory: {}", path),
         io::ErrorKind::PermissionDenied => {
-            eprintln!("Permission denied to view contents of: {}", path)
+            eprintln!("permission denied to view contents of: {}", path)
         }
-        _ => eprintln!("File is not a directory: {}", path),
+        _ => eprintln!("file is not a directory: {}", path),
     }
 
     return Ok(true);
