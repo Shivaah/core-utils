@@ -2,7 +2,7 @@ use std::{
     collections::HashSet,
     fs::{self, DirEntry, ReadDir},
     io,
-    os::unix::prelude::FileTypeExt,
+    os::{linux::fs::MetadataExt, unix::prelude::FileTypeExt},
     path::PathBuf,
 };
 
@@ -39,7 +39,7 @@ impl std::fmt::Display for FileType {
 /// # Arguments
 ///
 /// * `args` - A vector of strings representing the arguments for the `ls` command.
-pub fn execute(args: Vec<String>) -> Result<bool, io::Error> {
+pub fn execute(args: Vec<String>) -> io::Result<bool> {
     let (path, options) = parse(args);
 
     if let Err(wrong_option) = validate_ls_options(&options) {
@@ -88,9 +88,12 @@ pub fn execute(args: Vec<String>) -> Result<bool, io::Error> {
                     );
 
                     println!(
-                        "{}{} {}",
+                        "{}{} {} {} {} {}",
                         FileType(metadata.file_type()),
                         permissions_str,
+                        metadata.st_uid(),
+                        metadata.st_gid(),
+                        metadata.st_size(),
                         path.display()
                     )
                 });
